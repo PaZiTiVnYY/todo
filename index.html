@@ -442,11 +442,8 @@
         }
 
         function removeTask(index, event) {
-            event.stopPropagation(); // Чтобы клик не засчитался как выполнение
-            if (confirm('Удалить?')) {
-                getActiveList().tasks.splice(index, 1);
-                saveData(); renderTasks(); renderSidebar();
-            }
+			getActiveList().tasks.splice(index, 1);
+			saveData(); renderTasks(); renderSidebar();
         }
 
         function editTask(index) {
