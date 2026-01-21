@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Умный список задач</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            /* Переменные для светлой темы (по умолчанию) */
+            --bg-body: #f4f6f8;
+            --bg-card: #ffffff;
+            --bg-sidebar: #eef2f5;
+            --text-main: #2c3e50;
+            --text-muted: #95a5a6;
+            --border: #e0e0e0;
+            --accent: #3498db; /* Спокойный синий */
+            --accent-hover: #2980b9;
+            --danger: #e74c3c;
+            --item-hover: #f8f9fa;
+            --shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+
+        /* Тёмная тема */
+        body.dark-theme {
+            --bg-body: #121212;
+            --bg-card: #1e1e1e;
+            --bg-sidebar: #181818;
+            --text-main: #e0e0e0;
+            --text-muted: #757575;
+            --border: #333333;
+            --accent: #4fa3e0;
+            --accent-hover: #6ab0e6;
+            --item-hover: #2a2a2a;
+            --shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            overflow: hidden; /* Чтобы скролл был внутри блоков */
+        }
+
+        /* --- Sidebar (Списки) --- */
+        aside {
+            width: 280px;
+            background-color: var(--bg-sidebar);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+        }
+
+        .app-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--accent);
+        }
+
+        .lists-container {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .list-header {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-bottom: 5px;
+            color: var(--text-main);
+            transition: all 0.2s;
+        }
+
+        .nav-item:hover {
+            background-color: rgba(0,0,0,0.05);
+        }
+
+        body.dark-theme .nav-item:hover {
+            background-color: rgba(255,255,255,0.05);
+        }
+
+        .nav-item.active {
+            background-color: var(--accent);
+            color: white;
+        }
+
+        .nav-item-name {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+        }
+
+        .delete-list-btn {
+            opacity: 0;
+            background: none;
+            border: none;
+            color: inherit;
+            cursor: pointer;
+            padding: 4px;
+        }
+
+        .nav-item:hover .delete-list-btn {
+            opacity: 0.7;
+        }
+        
+        .nav-item:hover .delete-list-btn:hover {
+            opacity: 1;
+            color: #ffcccc;
+        }
+
+        .add-list-form {
+            margin-top: 15px;
+            display: flex;
+            gap: 5px;
+        }
+
+        /* --- Main Content (Задачи) --- */
+        main {
+            flex: 1;
+            background-color: var(--bg-card);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        header {
+            padding: 20px 40px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+        }
+
+        .theme-toggle {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+        }
+        
+        .theme-toggle:hover {
+            background-color: var(--item-hover);
+        }
+
+        .tasks-area {
+            flex: 1;
+            padding: 30px 40px;
+            overflow-y: auto;
+            max-width: 900px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        /* Input */
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 12px 15px;
+            border: 2px solid var(--border);
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            border-radius: 8px;
+            font-size: 1rem;
+            outline: none;
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--accent);
+        }
+
+        .btn-primary {
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            padding: 0 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--accent-hover);
+        }
+
+        /* Task Items */
+        .task-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 15px;
+            background-color: var(--bg-body);
+            border: 1px solid transparent;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            transition: all 0.2s;
+            animation: slideIn 0.3s ease;
+        }
+        
+        /* Animation: Slide In */
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .task-item:hover {
+            border-color: var(--border);
+            transform: translateX(4px);
+        }
+
+        .checkbox {
+            width: 22px;
+            height: 22px;
+            border: 2px solid var(--text-muted);
+            border-radius: 50%;
+            margin-right: 15px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+
+        .task-item.completed .checkbox {
+            background-color: var(--accent);
+            border-color: var(--accent);
+        }
+        
+        .task-item.completed .checkbox::after {
+            content: '\f00c';
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+            color: white;
+            font-size: 12px;
+        }
+
+        .task-text {
+            flex: 1;
+            font-size: 1rem;
+            transition: color 0.2s;
+        }
+
+        .task-item.completed .task-text {
+            text-decoration: line-through;
+            color: var(--text-muted);
+        }
+
+        .delete-task {
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 5px;
+            opacity: 0;
+            transition: all 0.2s;
+        }
+
+        .task-item:hover .delete-task {
+            opacity: 1;
+        }
+
+        .delete-task:hover {
+            color: var(--danger);
+        }
+
+        /* Мобильная адаптивность */
+        @media (max-width: 768px) {
+            body { flex-direction: column; }
+            aside { width: 100%; height: auto; max-height: 200px; padding: 10px; border-right: none; border-bottom: 1px solid var(--border); }
+            .app-title { margin-bottom: 10px; }
+            header { padding: 15px; }
+            .tasks-area { padding: 15px; }
+        }
+    </style>
+</head>
+<body>
+
+    <aside>
+        <div class="app-title">
+            <i class="fas fa-check-double"></i> Умный список
+        </div>
+        
+        <div class="list-header">Мои списки</div>
+        <div class="lists-container" id="listsContainer">
+            </div>
+
+        <div class="add-list-form">
+            <input type="text" id="newListInput" placeholder="+ Новый список">
+            <button class="btn-primary" onclick="addNewList()" style="padding: 0 12px;">Ok</button>
+        </div>
+    </aside>
+
+    <main>
+        <header>
+            <h2 id="currentListTitle">Основной</h2>
+            <button class="theme-toggle" onclick="toggleTheme()">
+                <i class="fas fa-adjust"></i> <span id="themeLabel">Тема</span>
+            </button>
+        </header>
+
+        <div class="tasks-area">
+            <div class="input-group">
+                <input type="text" id="taskInput" placeholder="Добавить задачу...">
+                <button class="btn-primary" onclick="addTask()">Добавить</button>
+            </div>
+
+            <div id="taskList">
+                </div>
+        </div>
+    </main>
+
+    <script>
+        // Структура данных приложения
+        let appData = {
+            lists: [
+                { id: 'main', name: 'Основной', tasks: [] } // "Основной" всегда существует
+            ],
+            activeListId: 'main',
+            theme: 'light'
+        };
+
+        // --- 1. Инициализация и Миграция ---
+        function init() {
+            const storedData = localStorage.getItem('tasks'); // Используем тот же ключ, что и раньше
+
+            if (storedData) {
+                const parsed = JSON.parse(storedData);
+                
+                // ПРОВЕРКА НА СТАРЫЙ ФОРМАТ (Массив задач)
+                if (Array.isArray(parsed)) {
+                    console.log("Обнаружен старый формат. Миграция...");
+                    // Переносим старые задачи в список "Основной"
+                    appData.lists[0].tasks = parsed;
+                } else {
+                    // Новый формат (Объект)
+                    appData = parsed;
+                }
+            }
+
+            // Применяем тему
+            applyTheme();
+            // Рендерим интерфейс
+            renderSidebar();
+            renderTasks();
+        }
+
+        // --- 2. Сохранение ---
+        function saveData() {
+            localStorage.setItem('tasks', JSON.stringify(appData));
+        }
+
+        // --- 3. Управление списками ---
+        function renderSidebar() {
+            const container = document.getElementById('listsContainer');
+            container.innerHTML = '';
+
+            appData.lists.forEach(list => {
+                const div = document.createElement('div');
+                div.className = `nav-item ${list.id === appData.activeListId ? 'active' : ''}`;
+                
+                // HTML для элемента списка
+                let deleteBtnHtml = '';
+                if (list.id !== 'main') { // "Основной" удалять нельзя
+                    deleteBtnHtml = `<button class="delete-list-btn" onclick="deleteList('${list.id}', event)"><i class="fas fa-times"></i></button>`;
+                }
+
+                div.innerHTML = `
+                    <div class="nav-item-name">
+                        <i class="fas fa-list-ul"></i> ${list.name} <span style="opacity: 0.6; font-size: 0.8em">(${list.tasks.length})</span>
+                    </div>
+                    ${deleteBtnHtml}
+                `;
+                
+                div.onclick = (e) => {
+                    // Если клик не по кнопке удаления
+                    if (!e.target.closest('.delete-list-btn')) {
+                        switchList(list.id);
+                    }
+                };
+                
+                container.appendChild(div);
+            });
+        }
+
+        function addNewList() {
+            const input = document.getElementById('newListInput');
+            const name = input.value.trim();
+            if (name) {
+                const newList = {
+                    id: 'list_' + Date.now(),
+                    name: name,
+                    tasks: []
+                };
+                appData.lists.push(newList);
+                appData.activeListId = newList.id; // Сразу переключаемся
+                input.value = '';
+                saveData();
+                renderSidebar();
+                renderTasks();
+            }
+        }
+
+        function deleteList(id, event) {
+            event.stopPropagation(); // Чтобы не сработало переключение
+            if (confirm('Удалить этот список и все задачи в нем?')) {
+                appData.lists = appData.lists.filter(l => l.id !== id);
+                // Если удалили активный, переключаемся на Main
+                if (appData.activeListId === id) {
+                    appData.activeListId = 'main';
+                }
+                saveData();
+                renderSidebar();
+                renderTasks();
+            }
+        }
+
+        function switchList(id) {
+            appData.activeListId = id;
+            saveData();
+            renderSidebar();
+            renderTasks();
+        }
+
+        // --- 4. Управление Задачами ---
+        function getActiveList() {
+            return appData.lists.find(l => l.id === appData.activeListId);
+        }
+
+        function renderTasks() {
+            const activeList = getActiveList();
+            const container = document.getElementById('taskList');
+            const title = document.getElementById('currentListTitle');
+            
+            title.textContent = activeList.name;
+            container.innerHTML = '';
+
+            activeList.tasks.forEach((task, index) => {
+                const el = document.createElement('div');
+                el.className = `task-item ${task.completed ? 'completed' : ''}`;
+                el.innerHTML = `
+                    <div class="checkbox" onclick="toggleTask(${index})"></div>
+                    <span class="task-text" ondblclick="editTask(${index})">${task.text}</span>
+                    <i class="fas fa-trash delete-task" onclick="removeTask(${index})"></i>
+                `;
+                container.appendChild(el);
+            });
+        }
+
+        function addTask() {
+            const input = document.getElementById('taskInput');
+            const text = input.value.trim();
+            if (text) {
+                getActiveList().tasks.unshift({ text, completed: false });
+                input.value = '';
+                saveData();
+                renderTasks();
+                renderSidebar(); // Чтобы обновить счетчик
+            }
+        }
+
+        function removeTask(index) {
+            if (confirm('Удалить задачу?')) {
+                getActiveList().tasks.splice(index, 1);
+                saveData();
+                renderTasks();
+                renderSidebar();
+            }
+        }
+
+        function toggleTask(index) {
+            const task = getActiveList().tasks[index];
+            task.completed = !task.completed;
+            saveData();
+            renderTasks();
+        }
+        
+        function editTask(index) {
+            const list = getActiveList();
+            const newText = prompt("Изменить задачу:", list.tasks[index].text);
+            if(newText && newText.trim()) {
+                list.tasks[index].text = newText.trim();
+                saveData();
+                renderTasks();
+            }
+        }
+
+        // --- 5. Темы ---
+        function toggleTheme() {
+            appData.theme = appData.theme === 'light' ? 'dark' : 'light';
+            saveData();
+            applyTheme();
+        }
+
+        function applyTheme() {
+            const body = document.body;
+            const label = document.getElementById('themeLabel');
+            if (appData.theme === 'dark') {
+                body.classList.add('dark-theme');
+                label.textContent = "Светлая тема";
+            } else {
+                body.classList.remove('dark-theme');
+                label.textContent = "Тёмная тема";
+            }
+        }
+
+        // Input enter key
+        document.getElementById('taskInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') addTask();
+        });
+        
+        document.getElementById('newListInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') addNewList();
+        });
+
+        // Запуск
+        init();
+
+    </script>
+</body>
+</html>
